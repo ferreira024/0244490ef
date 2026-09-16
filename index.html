@@ -1,25 +1,89 @@
-<!doctype html><html lang="pt-PT"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f6f8f8"><link rel="manifest" href="./manifest.webmanifest"><title>SGO PVZ</title><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>
-*{box-sizing:border-box}html,body,#map{height:100%;margin:0;font-family:Arial,sans-serif}#map{background:#e9eeee}.top{position:fixed;z-index:1100;top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));display:flex;gap:8px;pointer-events:none}.card,.top button{pointer-events:auto;background:#fff;border:1px solid #e2e7e8;box-shadow:0 8px 30px #1721261d;border-radius:15px}.brand{height:50px;padding:7px 13px;display:flex;align-items:center;gap:9px}.logo{width:30px;height:30px;border-radius:9px;background:conic-gradient(#d13f49 0 25%,#d09429 0 50%,#3f8065 0 75%,#3979a5 0)}.brand span{font-size:14px}.top button{height:50px;padding:0 16px;font-size:14px}.panel{position:fixed;z-index:1050;top:74px;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));width:300px;padding:10px;overflow:auto;background:#f7f9f9ed;backdrop-filter:blur(14px);border:1px solid #fff;border-radius:18px;box-shadow:0 15px 40px #17212620;transition:.2s}.status{font-size:11px;color:#738087;padding:7px}.group{background:#fff;border:1px solid #e4e8e9;border-radius:13px;overflow:hidden;margin-bottom:8px}.head{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#899398;padding:10px}.row{display:flex;gap:9px;align-items:center;padding:10px;border-top:1px solid #edf0f0;font-size:13px;cursor:pointer}.row small{display:block;color:#8b959a;font-size:10px;margin-top:2px}.row input{accent-color:#263238}.dot{width:9px;height:9px;border-radius:50%}.hydrantIcon{background:transparent!important;border:0!important}.coords{position:fixed;z-index:900;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));background:#fff;border:1px solid #e4e8e9;padding:7px 9px;border-radius:10px;font-size:10px;color:#657178}.leaflet-popup-content{min-width:230px;font-size:12px;line-height:1.45}@media(max-width:700px){.brand span{display:none}.panel{left:-315px;top:72px;width:min(300px,86vw)}.panel.open{left:max(8px,env(safe-area-inset-left))}.leaflet-control-zoom{margin-top:75px!important}}
-</style></head><body><div id="map"></div><div class="top"><div class="brand card"><div class="logo"></div><span>Software Gestão de Operações</span></div><button id="menu">☰ Camadas</button><button id="loc">◎</button></div><aside class="panel" id="panel"><div class="status" id="status">● Online · SGO PVZ</div>
-<div class="group"><div class="head">Ocorrências</div><label class="row"><input checked type="checkbox" data-l="occ"><span class="dot" style="background:#d62828"></span><span>Ocorrências ANEPC<small>Atualização automática</small></span></label></div>
-<div class="group"><div class="head">Rede de socorro</div><label class="row"><input type="checkbox" data-l="hydrants"><span style="font-size:18px">♜</span><span>Marcos / hidrantes<small>Símbolo próprio · detalhes ao clicar</small></span></label><label class="row"><input type="checkbox" data-l="reservoirs"><span class="dot" style="background:#2585a2"></span><span>Reservatórios de água</span></label></div>
-<div class="group"><div class="head">Riscos</div><label class="row"><input type="checkbox" data-l="fire"><span class="dot" style="background:#bd3b3b"></span><span>Perigosidade de incêndio</span></label><label class="row"><input type="checkbox" data-l="forest"><span class="dot" style="background:#e47d2c"></span><span>Perigosidade florestal</span></label><label class="row"><input type="checkbox" data-l="flood"><span class="dot" style="background:#367daf"></span><span>Zonas de cheia</span></label><label class="row"><input type="checkbox" data-l="coast"><span class="dot" style="background:#45a0bd"></span><span>Faixa costeira<small>Condicionantes CMPV · camada 53</small></span></label></div>
-<div class="group"><div class="head">População e território</div><label class="row"><input type="checkbox" data-l="census"><span class="dot" style="background:#5968a8"></span><span>Censos 2021 — BGRI<small>CMPV · camada 1</small></span></label><label class="row"><input type="checkbox" data-l="strategic"><span class="dot" style="background:#c64040"></span><span>Intervenções estratégicas<small>CMPV · camada 72</small></span></label></div>
-<div class="group"><div class="head">Infraestruturas</div><label class="row"><input type="checkbox" data-l="gas"><span class="dot" style="background:#d6a22f"></span><span>Rede de gás</span></label><label class="row"><input type="checkbox" data-l="water"><span class="dot" style="background:#418fc1"></span><span>Rede de águas</span></label></div>
-</aside><div class="coords" id="coords">41.38300, -8.76300</div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="https://unpkg.com/esri-leaflet@3.0.15/dist/esri-leaflet.js"></script><script>
-const map=L.map('map',{zoomControl:true}).setView([41.383,-8.763],13);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,attribution:'© OpenStreetMap'}).addTo(map);
-const N='https://sig.cm-pvarzim.pt/server/rest/services/Servicos/',O='https://sigonline.cm-pvarzim.pt/arcgis/rest/services/',A='https://services-eu1.arcgis.com/VlrHb7fn5ewYhX6y/ArcGIS/rest/services/OcorrenciasSite/FeatureServer/0';
-const esc=v=>{let d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML},pop=p=>Object.entries(p||{}).filter(([k,v])=>v!=null&&v!==''&&!/shape|objectid/i.test(k)).slice(0,16).map(([k,v])=>'<b>'+esc(k)+':</b> '+esc(v)+'<br>').join('');
-function dyn(url,ids,o=.65){let x=L.esri.dynamicMapLayer({url,layers:ids,opacity:o,useCors:false});x._id={url,ids};return x}
-const hsvg='<svg width="30" height="36" viewBox="0 0 30 36"><g fill="#d52f3b" stroke="white" stroke-width="2"><path d="M10 10h10v20H10z"/><path d="M7 7h16v7H7z"/><path d="M4 14h22v7H4z"/><path d="M7 30h16v4H7z"/></g><circle cx="15" cy="5" r="3" fill="#d52f3b" stroke="white" stroke-width="2"/></svg>';
-const hi=L.divIcon({className:'hydrantIcon',html:hsvg,iconSize:[30,36],iconAnchor:[15,32]});
-const hydrants=L.esri.featureLayer({url:O+'Inter_Intra/TEMATICOS_Infraestruturas/MapServer/87',useCors:false,pointToLayer:(g,ll)=>L.marker(ll,{icon:hi})}).bindPopup(l=>'<b>Hidrante / marco</b><br>'+pop(l.feature.properties));
-const reservoirs=L.esri.featureLayer({url:O+'Inter_Intra/TEMATICOS_Infraestruturas/MapServer/4',useCors:false,pointToLayer:(g,ll)=>L.circleMarker(ll,{radius:6,fillOpacity:.9})}).bindPopup(l=>pop(l.feature.properties));
-const occ=L.esri.featureLayer({url:A,useCors:true,pointToLayer:(g,ll)=>L.circleMarker(ll,{radius:7,color:'#fff',weight:2,fillColor:'#d62828',fillOpacity:.95})}).bindPopup(l=>'<b>Ocorrência ANEPC</b><br>'+pop(l.feature.properties));
-const layers={occ,hydrants,reservoirs,fire:dyn(N+'PLANOS_PDM2015/MapServer',[121]),forest:dyn(N+'PLANOS_PMDFCI/MapServer',[10]),flood:dyn(N+'PLANOS_PDM2015/MapServer',[113]),coast:dyn(N+'PLANOS_PPFPMAVM/MapServer',[53]),census:dyn(N+'V1_GOV_Censos_2021/MapServer',[1],.45),strategic:dyn(N+'PLANOS_PU_Revisao19/MapServer',[72]),gas:dyn(O+'Inter_Intra/TEMATICOS_Infraestruturas/MapServer',[89]),water:dyn(O+'Inter_Intra/TEMATICOS_Infraestruturas/MapServer',[91])};occ.addTo(map);
-document.querySelectorAll('[data-l]').forEach(c=>c.onchange=()=>{let l=layers[c.dataset.l];if(c.checked){if(!map.hasLayer(l))l.addTo(map);setTimeout(()=>{try{l.refresh?.();l.redraw?.();l._update?.();map.invalidateSize(false)}catch(e){}},100)}else if(map.hasLayer(l))map.removeLayer(l);if(innerWidth<701)panel.classList.remove('open')});
-menu.onclick=()=>panel.classList.toggle('open');loc.onclick=()=>map.locate({setView:true,maxZoom:16});map.on('mousemove click',e=>coords.textContent=e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5));
-map.on('click',e=>Object.values(layers).filter(l=>l._id&&map.hasLayer(l)).forEach(l=>L.esri.identifyFeatures({url:l._id.url}).on(map).at(e.latlng).layers('visible:'+l._id.ids.join(',')).run((er,fc)=>{if(!er&&fc?.features?.length)L.popup().setLatLng(e.latlng).setContent(pop(fc.features[0].properties)).openOn(map)})));
-setInterval(()=>{if(navigator.onLine&&map.hasLayer(occ)){try{occ.refresh();status.textContent='● Online · ANEPC '+new Date().toLocaleTimeString('pt-PT')}catch(e){}}},1000);
+<!doctype html>
+<html lang="pt-PT"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f5f7f7"><link rel="manifest" href="./manifest.webmanifest">
+<title>SGO · Póvoa de Varzim</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--ink:#192326;--muted:#728087;--line:#e2e7e8;--panel:#f8fafaf0}
+*{box-sizing:border-box}html,body,#map{height:100%;margin:0;font-family:Arial,sans-serif;color:var(--ink)}
+#map{background:#edf1f1}.glass{background:#fff;border:1px solid var(--line);box-shadow:0 8px 28px #1721261c}
+.top{position:fixed;z-index:1200;top:max(10px,env(safe-area-inset-top));left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));display:flex;gap:8px;align-items:center;pointer-events:none}
+.brand,.weather,.top button{pointer-events:auto;border-radius:15px}.brand{height:50px;padding:7px 12px;display:flex;align-items:center;gap:9px}.logo{width:30px;height:30px;border-radius:9px;background:conic-gradient(#d13f49 0 25%,#d09429 0 50%,#3f8065 0 75%,#3979a5 0)}.brand b{font-size:13px;font-weight:500;white-space:nowrap}
+.weather{height:50px;display:flex;align-items:center;gap:14px;padding:0 15px;font-size:12px}.weather strong{font-size:13px}.weather span{color:var(--muted)}
+.top button{height:50px;border:0;padding:0 15px;font-size:14px}
+.panel{position:fixed;z-index:1150;top:70px;left:max(10px,env(safe-area-inset-left));width:286px;max-height:calc(100% - 84px);overflow:auto;padding:9px;background:var(--panel);backdrop-filter:blur(16px);border:1px solid #fff;border-radius:18px;box-shadow:0 15px 38px #17212620;transition:.2s}
+.group{background:#fff;border:1px solid var(--line);border-radius:13px;overflow:hidden;margin-bottom:8px}.head{padding:10px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#899499}.row{display:flex;align-items:center;gap:9px;padding:10px;border-top:1px solid #edf0f0;font-size:13px;cursor:pointer}.row small{display:block;color:#8b969b;font-size:10px;margin-top:2px}.row input{accent-color:#263238}.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.info{position:fixed;z-index:1050;right:max(10px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));max-width:330px;padding:8px 10px;border-radius:12px;font-size:10px;color:#657279}.hydrantIcon{background:transparent!important;border:0!important}.leaflet-popup-content{min-width:220px;font-size:12px;line-height:1.5}.leaflet-popup-content-wrapper{border-radius:15px}
+@media(max-width:820px){.brand b{display:none}.weather{gap:8px;padding:0 10px}.weather .optional{display:none}.panel{left:-310px;top:68px;width:min(286px,86vw)}.panel.open{left:max(8px,env(safe-area-inset-left))}.leaflet-control-zoom{margin-top:72px!important}.top button{padding:0 12px}}
+</style></head><body>
+<div id="map"></div>
+<div class="top">
+ <div class="brand glass"><div class="logo"></div><b>SGO · PVZ</b></div>
+ <div class="weather glass"><strong id="temp">--°C</strong><span id="hum">HR --%</span><span id="wind">Vento --</span><span class="optional" id="rain">Prec. --</span><span id="rcm">RCM --</span></div>
+ <button class="glass" id="layersBtn">☰ Camadas</button>
+</div>
+<aside class="panel" id="panel">
+ <div class="group"><div class="head">Situação</div>
+  <label class="row"><input checked type="checkbox" data-layer="occ"><span class="dot" style="background:#d62828"></span><span>Ocorrências ANEPC<small>Visualização em tempo real</small></span></label>
+ </div>
+ <div class="group"><div class="head">Abastecimento</div>
+  <label class="row"><input type="checkbox" data-layer="hydrants"><span id="hydLegend"></span><span>Hidrantes / marcos<small>Rede municipal · clicável</small></span></label>
+  <label class="row"><input type="checkbox" data-layer="reservoirs"><span class="dot" style="background:#2585a2"></span><span>Reservatórios de água</span></label>
+ </div>
+ <div class="group"><div class="head">Risco imediato</div>
+  <label class="row"><input type="checkbox" data-layer="fire"><span class="dot" style="background:#c94848"></span><span>Perigosidade de incêndio</span></label>
+  <label class="row"><input type="checkbox" data-layer="flood"><span class="dot" style="background:#3979a5"></span><span>Zonas de cheia</span></label>
+ </div>
+ <div class="group"><div class="head">Infraestruturas críticas</div>
+  <label class="row"><input type="checkbox" data-layer="gas"><span class="dot" style="background:#d09429"></span><span>Rede de gás</span></label>
+  <label class="row"><input type="checkbox" data-layer="water"><span class="dot" style="background:#438fbd"></span><span>Rede de águas</span></label>
+ </div>
+</aside>
+<div class="info glass" id="info">Póvoa de Varzim · visualização operacional</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/esri-leaflet@3.0.15/dist/esri-leaflet.js"></script>
+<script>
+const PVZ=[41.383,-8.763],map=L.map('map',{zoomControl:true}).setView(PVZ,13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,attribution:'© OpenStreetMap'}).addTo(map);
+const NEW='https://sig.cm-pvarzim.pt/server/rest/services/Servicos/',OLD='https://sigonline.cm-pvarzim.pt/arcgis/rest/services/';
+const ANEPC='https://services-eu1.arcgis.com/VlrHb7fn5ewYhX6y/ArcGIS/rest/services/OcorrenciasSite/FeatureServer/0';
+const esc=v=>{let d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};
+const details=p=>Object.entries(p||{}).filter(([k,v])=>v!=null&&v!==''&&!/shape|objectid/i.test(k)).slice(0,16).map(([k,v])=>'<b>'+esc(k.replaceAll('_',' '))+':</b> '+esc(v)+'<br>').join('');
+function dyn(url,ids,o=.65){let l=L.esri.dynamicMapLayer({url,layers:ids,opacity:o,useCors:false});l._identify={url,ids};return l}
+const hydrantSVG='<svg width="28" height="34" viewBox="0 0 28 34" xmlns="http://www.w3.org/2000/svg"><g fill="#d5323e" stroke="#fff" stroke-width="1.8"><path d="M9 10h10v19H9z"/><rect x="6" y="7" width="16" height="6" rx="1"/><rect x="3" y="14" width="22" height="7" rx="2"/><rect x="7" y="29" width="14" height="4" rx="1"/></g><circle cx="14" cy="5" r="3" fill="#d5323e" stroke="#fff" stroke-width="1.8"/></svg>';
+hydLegend.innerHTML=hydrantSVG.replace('width="28" height="34"','width="18" height="22"');
+const hicon=L.divIcon({className:'hydrantIcon',html:hydrantSVG,iconSize:[28,34],iconAnchor:[14,31],popupAnchor:[0,-28]});
+const hydrants=L.esri.featureLayer({url:OLD+'Inter_Intra/TEMATICOS_Infraestruturas/MapServer/87',useCors:false,pointToLayer:(g,ll)=>L.marker(ll,{icon:hicon})}).bindPopup(l=>'<b>Hidrante / marco</b><br>'+details(l.feature.properties));
+const reservoirs=L.esri.featureLayer({url:OLD+'Inter_Intra/TEMATICOS_Infraestruturas/MapServer/4',useCors:false,pointToLayer:(g,ll)=>L.circleMarker(ll,{radius:6,fillColor:'#2585a2',color:'#fff',weight:2,fillOpacity:.9})}).bindPopup(l=>'<b>Reservatório</b><br>'+details(l.feature.properties));
+const occ=L.esri.featureLayer({url:ANEPC,useCors:true,pointToLayer:(g,ll)=>L.circleMarker(ll,{radius:7,fillColor:'#d62828',color:'#fff',weight:2,fillOpacity:.95})}).bindPopup(l=>'<b>Ocorrência ANEPC</b><br>'+details(l.feature.properties));
+const layers={occ,hydrants,reservoirs,fire:dyn(NEW+'PLANOS_PDM2015/MapServer',[121],.58),flood:dyn(NEW+'PLANOS_PDM2015/MapServer',[113],.60),gas:dyn(OLD+'Inter_Intra/TEMATICOS_Infraestruturas/MapServer',[89],.72),water:dyn(OLD+'Inter_Intra/TEMATICOS_Infraestruturas/MapServer',[91],.68)};
+occ.addTo(map);
+function toggle(name,on){let l=layers[name];if(!l)return;try{if(on){if(!map.hasLayer(l))l.addTo(map);setTimeout(()=>{try{l.refresh?.();l.redraw?.();l._update?.()}catch(e){}},120)}else if(map.hasLayer(l))map.removeLayer(l)}catch(e){}}
+document.querySelectorAll('[data-layer]').forEach(x=>x.addEventListener('change',()=>{toggle(x.dataset.layer,x.checked);if(innerWidth<821)panel.classList.remove('open')}));
+layersBtn.onclick=()=>panel.classList.toggle('open');
+map.on('click',e=>{info.textContent=e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5);Object.values(layers).filter(l=>l._identify&&map.hasLayer(l)).forEach(l=>L.esri.identifyFeatures({url:l._identify.url}).on(map).at(e.latlng).layers('visible:'+l._identify.ids.join(',')).run((er,fc)=>{if(!er&&fc?.features?.length)L.popup().setLatLng(e.latlng).setContent(details(fc.features[0].properties)).openOn(map)}))});
+setInterval(()=>{if(navigator.onLine&&map.hasLayer(occ))try{occ.refresh()}catch(e){}},5000);
+
+// IPMA: nearest reporting station to PVZ; display-only.
+async function meteo(){
+ try{
+  const [st,ob,rc]=await Promise.all([
+   fetch('https://api.ipma.pt/open-data/observation/meteorology/stations/stations.json').then(r=>r.json()),
+   fetch('https://api.ipma.pt/open-data/observation/meteorology/stations/observations.json').then(r=>r.json()),
+   fetch('https://api.ipma.pt/open-data/forecast/meteorology/rcm/rcm-d0.json').then(r=>r.json())
+  ]);
+  const arr=Array.isArray(st)?st:(st.data||[]);
+  let best=null,bd=1e9;
+  for(const x of arr){let la=+(x.latitude??x.lat),lo=+(x.longitude??x.lon);if(!isFinite(la)||!isFinite(lo))continue;let d=(la-PVZ[0])**2+(lo-PVZ[1])**2;if(d<bd){bd=d;best=x}}
+  let id=best&&(best.idEstacao??best.idStation??best.id);
+  let rec=null;
+  if(Array.isArray(ob)){rec=ob.find(x=>String(x.idEstacao??x.idStation??x.id)===String(id))||ob[0]}
+  else{let vals=Object.values(ob).flatMap(v=>Array.isArray(v)?v:[]);rec=vals.find(x=>String(x.idEstacao??x.idStation??x.id)===String(id))||vals[0]}
+  if(rec){let t=rec.temperatura??rec.temperature??rec.temp, h=rec.humidade??rec.humidity??rec.hr, w=rec.intensidadeVentoKM??rec.windSpeed??rec.intensidadeVento, r=rec.precAcumulada??rec.precipitation??rec.precipitacao;if(t!=null)temp.textContent=Number(t).toFixed(1)+'°C';if(h!=null)hum.textContent='HR '+Math.round(h)+'%';if(w!=null)wind.textContent='Vento '+w+' km/h';if(r!=null)rain.textContent='Prec. '+r+' mm'}
+  const rcmNames=['','Reduzido','Moderado','Elevado','Muito elevado','Máximo'];let locals=rc.local||{};let near=null,dd=1e9;for(const v of Object.values(locals)){let d=(+v.latitude-PVZ[0])**2+(+v.longitude-PVZ[1])**2;if(d<dd){dd=d;near=v}}if(near?.data?.rcm)document.getElementById('rcm').textContent='RCM '+rcmNames[near.data.rcm];
+ }catch(e){document.getElementById('rcm').textContent='IPMA indisponível'}
+}
+meteo();setInterval(meteo,600000);
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js');
 </script></body></html>
