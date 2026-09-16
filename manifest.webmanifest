@@ -1,0 +1,10 @@
+{
+  "name": "SGO - PVZ",
+  "short_name": "SGO PVZ",
+  "description": "Visualizador territorial operacional da Póvoa de Varzim",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#cbd0d2",
+  "theme_color": "#25292b",
+  "orientation": "any"
+}
