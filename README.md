@@ -1,25 +1,14 @@
-# SGO - PVZ
+# SGO - PVZ v5
 
-Visualizador territorial operacional da Póvoa de Varzim.
+Visualizador operacional territorial.
 
-## Conteúdo
+## Alterações desta versão
+- Hidrantes/marcos carregados como elementos vetoriais clicáveis.
+- Reservatórios clicáveis.
+- Identificação por clique das camadas dinâmicas do SIG municipal.
+- Popups com atributos disponíveis nas camadas.
+- Nova camada de Ocorrências ANEPC.
+- A camada ANEPC é consultada a cada 1 segundo enquanto estiver ativa e houver ligação.
+- Service Worker v5 com prioridade à rede para ocorrências, evitando apresentar cache antigo como informação atual.
 
-- `index.html` — aplicação principal
-- `sw.js` — cache e funcionamento offline
-- `manifest.webmanifest` — instalação como aplicação
-
-## Funcionalidades
-
-- Camadas públicas do SIG da Câmara Municipal da Póvoa de Varzim
-- Zonas de risco, hidrantes, redes técnicas, lares e equipamentos
-- Atualização das camadas ativas a cada 30 minutos
-- Funcionamento offline para áreas e camadas previamente consultadas
-- Interface adaptada a telemóvel e iPad
-
-## Publicação com GitHub Pages
-
-Nas definições do repositório, abra **Pages**, escolha **Deploy from a branch**,
-selecione a branch **main** e a pasta **/(root)**.
-
-> Informação de apoio. Confirme os dados com o Serviço Municipal de Proteção
-> Civil e com as entidades gestoras antes de decisões operacionais.
+Nota: atualizar a cada segundo significa consultar a fonte a cada segundo. A informação só muda quando a própria fonte ANEPC publicar uma alteração.

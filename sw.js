@@ -1,9 +1,13 @@
-const SHELL='sgo-shell-v4',RUNTIME='sgo-runtime-v4',META='sgo-meta-v4',TTL=30*60*1000;
-const APP=['./','./index.html','./manifest.webmanifest','https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','https://unpkg.com/esri-leaflet@3.0.15/dist/esri-leaflet.js','https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png','https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'];
-self.addEventListener('install',e=>e.waitUntil(caches.open(SHELL).then(c=>Promise.allSettled(APP.map(u=>c.add(u)))).then(()=>self.skipWaiting())));
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>![SHELL,RUNTIME,META].includes(k)).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-async function cacheFirst(req){const c=await caches.open(RUNTIME),hit=await c.match(req);if(hit)return hit;const res=await fetch(req);if(res&&res.ok||res.type==='opaque')c.put(req,res.clone());return res}
-async function stamp(req){const c=await caches.open(META),r=await c.match(new Request('https://sgo.local/'+encodeURIComponent(req.url)));return r?+(await r.text()):0}
-async function setStamp(req){const c=await caches.open(META);return c.put(new Request('https://sgo.local/'+encodeURIComponent(req.url)),new Response(String(Date.now())))}
-async function freshThirty(req){const c=await caches.open(RUNTIME),hit=await c.match(req),age=Date.now()-await stamp(req);if(hit&&age<TTL)return hit;try{const res=await fetch(req);if(res&&res.ok||res.type==='opaque'){await c.put(req,res.clone());await setStamp(req)}return res}catch(err){if(hit)return hit;throw err}}
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(e.request.mode==='navigate'){e.respondWith(fetch(e.request).then(r=>{const x=r.clone();caches.open(SHELL).then(c=>c.put('./index.html',x));return r}).catch(()=>caches.match('./index.html')));return}if(u.hostname.includes('cm-pvarzim.pt')){e.respondWith(freshThirty(e.request));return}if(u.hostname.includes('tile.openstreetmap.org')||u.hostname.includes('arcgisonline.com')||u.hostname==='unpkg.com'){e.respondWith(cacheFirst(e.request));return}e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)))});
+const SHELL='sgo-shell-v5',RUNTIME='sgo-runtime-v5';
+const APP=['./','./index.html','./manifest.webmanifest','https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','https://unpkg.com/esri-leaflet@3.0.15/dist/esri-leaflet.js'];
+self.addEventListener('install',e=>e.waitUntil(caches.open(SHELL).then(c=>Promise.allSettled(APP.map(x=>c.add(x)))).then(()=>self.skipWaiting())));
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>![SHELL,RUNTIME].includes(k)).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener('fetch',e=>{
+ if(e.request.method!=='GET')return;
+ const u=new URL(e.request.url);
+ if(e.request.mode==='navigate'){e.respondWith(fetch(e.request).then(r=>{caches.open(SHELL).then(c=>c.put('./index.html',r.clone()));return r}).catch(()=>caches.match('./index.html')));return}
+ /* ANEPC: network-first para não servir ocorrências antigas como se fossem atuais. */
+ if(u.hostname==='services-eu1.arcgis.com'){e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));return}
+ if(u.hostname.includes('cm-pvarzim.pt')){e.respondWith(fetch(e.request).then(r=>{caches.open(RUNTIME).then(c=>c.put(e.request,r.clone()));return r}).catch(()=>caches.match(e.request)));return}
+ e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(x=>{if(x.ok)caches.open(RUNTIME).then(c=>c.put(e.request,x.clone()));return x})));
+});
