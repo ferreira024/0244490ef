@@ -14,6 +14,9 @@
 .top button{height:50px;border:0;padding:0 15px;font-size:14px}
 .panel{position:fixed;z-index:1150;top:70px;left:max(10px,env(safe-area-inset-left));width:286px;max-height:calc(100% - 84px);overflow:auto;padding:9px;background:var(--panel);backdrop-filter:blur(16px);border:1px solid #fff;border-radius:18px;box-shadow:0 15px 38px #17212620;transition:.2s}
 .group{background:#fff;border:1px solid var(--line);border-radius:13px;overflow:hidden;margin-bottom:8px}.head{padding:10px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#899499}.row{display:flex;align-items:center;gap:9px;padding:10px;border-top:1px solid #edf0f0;font-size:13px;cursor:pointer}.row small{display:block;color:#8b969b;font-size:10px;margin-top:2px}.row input{accent-color:#263238}.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.metStatus{padding:8px 10px;font-size:10px;color:#7b878c;border-top:1px solid #edf0f0}
+.metStatus.ok{color:#347255}.metStatus.err{color:#a74646}
+.wxBadge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:#eef3f4;font-size:12px;flex:none}
 .info{position:fixed;z-index:1050;right:max(10px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));max-width:330px;padding:8px 10px;border-radius:12px;font-size:10px;color:#657279}.hydrantIcon{background:transparent!important;border:0!important}.leaflet-popup-content{min-width:220px;font-size:12px;line-height:1.5}.leaflet-popup-content-wrapper{border-radius:15px}
 @media(max-width:820px){.brand b{display:none}.weather{gap:8px;padding:0 10px}.weather .optional{display:none}.panel{left:-310px;top:68px;width:min(286px,86vw)}.panel.open{left:max(8px,env(safe-area-inset-left))}.leaflet-control-zoom{margin-top:72px!important}.top button{padding:0 12px}}
 </style></head><body>
@@ -30,6 +33,16 @@
  <div class="group"><div class="head">Abastecimento</div>
   <label class="row"><input type="checkbox" data-layer="hydrants"><span id="hydLegend"></span><span>Hidrantes / marcos<small>Rede municipal · clicável</small></span></label>
   <label class="row"><input type="checkbox" data-layer="reservoirs"><span class="dot" style="background:#2585a2"></span><span>Reservatórios de água</span></label>
+ </div>
+ <div class="group"><div class="head">Meteorologia · IPMA MF2</div>
+  <label class="row"><input type="radio" name="meteoLayer" data-meteo="Temperatura"><span class="wxBadge">🌡</span><span>Temperatura<small>AROME · temperatura a 2 m</small></span></label>
+  <label class="row"><input type="radio" name="meteoLayer" data-meteo="Vento a 10m"><span class="wxBadge">💨</span><span>Vento<small>AROME · vento a 10 m</small></span></label>
+  <label class="row"><input type="radio" name="meteoLayer" data-meteo="Rajada a 10m"><span class="wxBadge">↗</span><span>Rajadas<small>Intensidade da rajada a 10 m</small></span></label>
+  <label class="row"><input type="radio" name="meteoLayer" data-meteo="Humidade Relativa"><span class="wxBadge">💧</span><span>Humidade relativa</span></label>
+  <label class="row"><input type="radio" name="meteoLayer" data-meteo="Precipitação"><span class="wxBadge">🌧</span><span>Precipitação</span></label>
+  <label class="row"><input type="radio" name="meteoLayer" data-meteo="FWI"><span class="wxBadge">🔥</span><span>FWI<small>Perigo meteorológico de incêndio</small></span></label>
+  <label class="row"><input type="radio" name="meteoLayer" data-meteo="" checked><span class="wxBadge">×</span><span>Sem camada meteorológica</span></label>
+  <div class="metStatus" id="metLayerStatus">A preparar serviço IPMA MF2…</div>
  </div>
  <div class="group"><div class="head">Risco imediato</div>
   <label class="row"><input type="checkbox" data-layer="fire"><span class="dot" style="background:#c94848"></span><span>Perigosidade de incêndio</span></label>
@@ -63,27 +76,112 @@ function toggle(name,on){let l=layers[name];if(!l)return;try{if(on){if(!map.hasL
 document.querySelectorAll('[data-layer]').forEach(x=>x.addEventListener('change',()=>{toggle(x.dataset.layer,x.checked);if(innerWidth<821)panel.classList.remove('open')}));
 layersBtn.onclick=()=>panel.classList.toggle('open');
 map.on('click',e=>{info.textContent=e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5);Object.values(layers).filter(l=>l._identify&&map.hasLayer(l)).forEach(l=>L.esri.identifyFeatures({url:l._identify.url}).on(map).at(e.latlng).layers('visible:'+l._identify.ids.join(',')).run((er,fc)=>{if(!er&&fc?.features?.length)L.popup().setLatLng(e.latlng).setContent(details(fc.features[0].properties)).openOn(map)}))});
-setInterval(()=>{if(navigator.onLine&&map.hasLayer(occ))try{occ.refresh()}catch(e){}},5000);
+setInterval(()=>{if(navigator.onLine&&layers.occ&&map.hasLayer(layers.occ))try{layers.occ.refresh()}catch(e){}},5000);
 
-// IPMA: nearest reporting station to PVZ; display-only.
+// IPMA: observação mais recente da estação disponível mais próxima.
+function validIPMA(v){v=Number(v);return Number.isFinite(v)&&v>-90}
+function windDir(id){
+ const dirs={0:'N',1:'NNE',2:'NE',3:'ENE',4:'E',5:'ESE',6:'SE',7:'SSE',8:'S',9:'SSW',10:'SW',11:'WSW',12:'W',13:'WNW',14:'NW',15:'NNW',16:'N'};
+ return dirs[id]||'';
+}
 async function meteo(){
  try{
-  const [st,ob,rc]=await Promise.all([
-   fetch('https://api.ipma.pt/open-data/observation/meteorology/stations/stations.json').then(r=>r.json()),
-   fetch('https://api.ipma.pt/open-data/observation/meteorology/stations/observations.json').then(r=>r.json()),
-   fetch('https://api.ipma.pt/open-data/forecast/meteorology/rcm/rcm-d0.json').then(r=>r.json())
+  const [stations,obs]=await Promise.all([
+   fetch('https://api.ipma.pt/open-data/observation/meteorology/stations/stations.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json()}),
+   fetch('https://api.ipma.pt/open-data/observation/meteorology/stations/observations.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json()})
   ]);
-  const arr=Array.isArray(st)?st:(st.data||[]);
-  let best=null,bd=1e9;
-  for(const x of arr){let la=+(x.latitude??x.lat),lo=+(x.longitude??x.lon);if(!isFinite(la)||!isFinite(lo))continue;let d=(la-PVZ[0])**2+(lo-PVZ[1])**2;if(d<bd){bd=d;best=x}}
-  let id=best&&(best.idEstacao??best.idStation??best.id);
-  let rec=null;
-  if(Array.isArray(ob)){rec=ob.find(x=>String(x.idEstacao??x.idStation??x.id)===String(id))||ob[0]}
-  else{let vals=Object.values(ob).flatMap(v=>Array.isArray(v)?v:[]);rec=vals.find(x=>String(x.idEstacao??x.idStation??x.id)===String(id))||vals[0]}
-  if(rec){let t=rec.temperatura??rec.temperature??rec.temp, h=rec.humidade??rec.humidity??rec.hr, w=rec.intensidadeVentoKM??rec.windSpeed??rec.intensidadeVento, r=rec.precAcumulada??rec.precipitation??rec.precipitacao;if(t!=null)temp.textContent=Number(t).toFixed(1)+'°C';if(h!=null)hum.textContent='HR '+Math.round(h)+'%';if(w!=null)wind.textContent='Vento '+w+' km/h';if(r!=null)rain.textContent='Prec. '+r+' mm'}
-  const rcmNames=['','Reduzido','Moderado','Elevado','Muito elevado','Máximo'];let locals=rc.local||{};let near=null,dd=1e9;for(const v of Object.values(locals)){let d=(+v.latitude-PVZ[0])**2+(+v.longitude-PVZ[1])**2;if(d<dd){dd=d;near=v}}if(near?.data?.rcm)document.getElementById('rcm').textContent='RCM '+rcmNames[near.data.rcm];
- }catch(e){document.getElementById('rcm').textContent='IPMA indisponível'}
+  const st=Array.isArray(stations)?stations:(stations.data||[]);
+  let best=null,bd=Infinity;
+  for(const s of st){
+   const la=Number(s.latitude??s.lat),lo=Number(s.longitude??s.lon);
+   if(!Number.isFinite(la)||!Number.isFinite(lo))continue;
+   const d=(la-PVZ[0])**2+(lo-PVZ[1])**2;
+   if(d<bd){bd=d;best=s}
+  }
+  const sid=String(best?.idEstacao??best?.idStation??best?.id??'');
+  const times=Object.keys(obs||{}).sort().reverse();
+  let rec=null,usedTime='';
+  for(const tm of times){
+   const block=obs[tm];
+   if(block&&typeof block==='object'&&!Array.isArray(block)){
+    rec=block[sid]||block[Number(sid)];
+    if(rec){usedTime=tm;break}
+   }
+   if(Array.isArray(block)){
+    rec=block.find(x=>String(x.idEstacao??x.idStation??x.id)===sid);
+    if(rec){usedTime=tm;break}
+   }
+  }
+  if(!rec) throw Error('Sem observação IPMA');
+  const t=rec.temperatura, h=rec.humidade, w=rec.intensidadeVentoKM, r=rec.precAcumulada, d=windDir(rec.idDireccVento);
+  temp.textContent=validIPMA(t)?Number(t).toFixed(1)+'°C':'--°C';
+  hum.textContent=validIPMA(h)?'HR '+Math.round(h)+'%':'HR --%';
+  wind.textContent=validIPMA(w)?'Vento '+(d?d+' ':'')+Number(w).toFixed(0)+' km/h':'Vento --';
+  rain.textContent=validIPMA(r)?'Prec. '+Number(r).toFixed(1)+' mm':'Prec. --';
+  info.textContent='IPMA · '+(best?.localEstacao||best?.nome||'estação mais próxima')+(usedTime?' · '+usedTime:'');
+ }catch(e){
+  temp.textContent='--°C';hum.textContent='HR --%';wind.textContent='Vento --';rain.textContent='Prec. --';
+ }
 }
 meteo();setInterval(meteo,600000);
+
+// IPMA MF2 — WMS público. Descobre os nomes reais das camadas através do GetCapabilities,
+// evitando nomes hard-coded que podem mudar no serviço.
+const MF2_WMS='https://mf2.ipma.pt/services';
+let meteoWmsLayer=null, mf2Catalog=null;
+const metStatus=document.getElementById('metLayerStatus');
+
+function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()}
+async function loadMF2Catalog(){
+ if(mf2Catalog)return mf2Catalog;
+ const u=MF2_WMS+'?service=WMS&request=GetCapabilities';
+ const r=await fetch(u,{cache:'no-store'});
+ if(!r.ok)throw Error('WMS '+r.status);
+ const xml=new DOMParser().parseFromString(await r.text(),'text/xml');
+ const entries=[...xml.querySelectorAll('Layer')].map(el=>({
+   name:el.querySelector(':scope > Name')?.textContent?.trim(),
+   title:el.querySelector(':scope > Title')?.textContent?.trim()
+ })).filter(x=>x.name&&x.title);
+ mf2Catalog=entries;
+ metStatus.textContent='IPMA MF2 disponível';
+ metStatus.className='metStatus ok';
+ return entries;
+}
+function chooseMF2(entries,label){
+ const q=norm(label);
+ let candidates=entries.filter(x=>norm(x.title)===q);
+ if(!candidates.length)candidates=entries.filter(x=>norm(x.title).includes(q));
+ // Preferência pelo Continente/AROME quando o título/nome o indicar.
+ candidates.sort((a,b)=>{
+   const sa=(/arome|continent|pib|ptc/i.test(a.name+' '+a.title)?1:0);
+   const sb=(/arome|continent|pib|ptc/i.test(b.name+' '+b.title)?1:0);
+   return sb-sa;
+ });
+ return candidates[0];
+}
+async function setMeteoLayer(label,input){
+ if(meteoWmsLayer){map.removeLayer(meteoWmsLayer);meteoWmsLayer=null}
+ if(!label){metStatus.textContent='Sem camada meteorológica ativa';metStatus.className='metStatus';return}
+ metStatus.textContent='A carregar '+label+'…';metStatus.className='metStatus';
+ try{
+   const entries=await loadMF2Catalog();
+   const item=chooseMF2(entries,label);
+   if(!item)throw Error('Camada não encontrada');
+   meteoWmsLayer=L.tileLayer.wms(MF2_WMS,{
+     layers:item.name,format:'image/png',transparent:true,version:'1.3.0',opacity:.68,
+     attribution:'Dados © IPMA · MF2'
+   }).addTo(map);
+   metStatus.textContent=label+' · IPMA MF2';
+   metStatus.className='metStatus ok';
+   if(innerWidth<821)panel.classList.remove('open');
+ }catch(e){
+   input.checked=false;
+   document.querySelector('[data-meteo=""]').checked=true;
+   metStatus.textContent='MF2 indisponível neste momento';
+   metStatus.className='metStatus err';
+ }
+}
+document.querySelectorAll('[data-meteo]').forEach(x=>x.addEventListener('change',()=>{if(x.checked)setMeteoLayer(x.dataset.meteo,x)}));
+loadMF2Catalog().catch(()=>{metStatus.textContent='MF2: ligação indisponível';metStatus.className='metStatus err'});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js');
 </script></body></html>
