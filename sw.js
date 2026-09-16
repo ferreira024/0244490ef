@@ -1,4 +1,4 @@
-const SHELL='sgo-shell-v5',RUNTIME='sgo-runtime-v5';
+const SHELL='sgo-shell-v6',RUNTIME='sgo-runtime-v6';
 const APP=['./','./index.html','./manifest.webmanifest','https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','https://unpkg.com/esri-leaflet@3.0.15/dist/esri-leaflet.js'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(SHELL).then(c=>Promise.allSettled(APP.map(x=>c.add(x)))).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>![SHELL,RUNTIME].includes(k)).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
