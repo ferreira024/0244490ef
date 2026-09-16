@@ -35,12 +35,12 @@
   <label class="row"><input type="checkbox" data-layer="reservoirs"><span class="dot" style="background:#2585a2"></span><span>Reservatórios de água</span></label>
  </div>
  <div class="group"><div class="head">Meteorologia · IPMA MF2</div>
-  <label class="row"><input type="radio" name="meteoLayer" data-meteo="Temperatura"><span class="wxBadge">🌡</span><span>Temperatura<small>AROME · temperatura a 2 m</small></span></label>
-  <label class="row"><input type="radio" name="meteoLayer" data-meteo="Vento a 10m"><span class="wxBadge">💨</span><span>Vento<small>AROME · vento a 10 m</small></span></label>
-  <label class="row"><input type="radio" name="meteoLayer" data-meteo="Rajada a 10m"><span class="wxBadge">↗</span><span>Rajadas<small>Intensidade da rajada a 10 m</small></span></label>
-  <label class="row"><input type="radio" name="meteoLayer" data-meteo="Humidade Relativa"><span class="wxBadge">💧</span><span>Humidade relativa</span></label>
-  <label class="row"><input type="radio" name="meteoLayer" data-meteo="Precipitação"><span class="wxBadge">🌧</span><span>Precipitação</span></label>
-  <label class="row"><input type="radio" name="meteoLayer" data-meteo="FWI"><span class="wxBadge">🔥</span><span>FWI<small>Perigo meteorológico de incêndio</small></span></label>
+  <label class="row"><input type="radio" name="meteoLayer" data-meteo="temperature"><span class="wxBadge">🌡</span><span>Temperatura<small>AROME · temperatura a 2 m</small></span></label>
+  <label class="row"><input type="radio" name="meteoLayer" data-meteo="wind"><span class="wxBadge">💨</span><span>Vento<small>AROME · vento a 10 m</small></span></label>
+  <label class="row"><input type="radio" name="meteoLayer" data-meteo="gust"><span class="wxBadge">↗</span><span>Rajadas<small>Intensidade da rajada a 10 m</small></span></label>
+  <label class="row"><input type="radio" name="meteoLayer" data-meteo="humidity"><span class="wxBadge">💧</span><span>Humidade relativa</span></label>
+  <label class="row"><input type="radio" name="meteoLayer" data-meteo="precipitation"><span class="wxBadge">🌧</span><span>Precipitação</span></label>
+  <label class="row"><input type="radio" name="meteoLayer" data-meteo="fwi"><span class="wxBadge">🔥</span><span>FWI<small>Perigo meteorológico de incêndio</small></span></label>
   <label class="row"><input type="radio" name="meteoLayer" data-meteo="" checked><span class="wxBadge">×</span><span>Sem camada meteorológica</span></label>
   <div class="metStatus" id="metLayerStatus">A preparar serviço IPMA MF2…</div>
  </div>
@@ -125,63 +125,81 @@ async function meteo(){
 }
 meteo();setInterval(meteo,600000);
 
-// IPMA MF2 — WMS público. Descobre os nomes reais das camadas através do GetCapabilities,
-// evitando nomes hard-coded que podem mudar no serviço.
+// IPMA MF2 — camadas WMS diretas.
+// O browser pede as imagens WMS diretamente: não depende de fetch/GetCapabilities/CORS.
 const MF2_WMS='https://mf2.ipma.pt/services';
-let meteoWmsLayer=null, mf2Catalog=null;
+let meteoWmsLayer=null;
 const metStatus=document.getElementById('metLayerStatus');
 
-function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()}
-async function loadMF2Catalog(){
- if(mf2Catalog)return mf2Catalog;
- const u=MF2_WMS+'?service=WMS&request=GetCapabilities';
- const r=await fetch(u,{cache:'no-store'});
- if(!r.ok)throw Error('WMS '+r.status);
- const xml=new DOMParser().parseFromString(await r.text(),'text/xml');
- const entries=[...xml.querySelectorAll('Layer')].map(el=>({
-   name:el.querySelector(':scope > Name')?.textContent?.trim(),
-   title:el.querySelector(':scope > Title')?.textContent?.trim()
- })).filter(x=>x.name&&x.title);
- mf2Catalog=entries;
- metStatus.textContent='IPMA MF2 disponível';
- metStatus.className='metStatus ok';
- return entries;
+const MF2_PRODUCTS={
+ temperature:{title:'Temperatura',layer:'arome.2m.temperature',unit:'°C'},
+ wind:{title:'Vento a 10 m',layer:'arome.10m.wind',unit:'km/h'},
+ gust:{title:'Rajadas a 10 m',layer:'arome.10m.gustintensity',unit:'km/h'},
+ humidity:{title:'Humidade relativa',layer:'arome.2m.relative_humidity',unit:'%'},
+ precipitation:{title:'Precipitação',layer:'arome.0m.precipitation',unit:'mm'},
+ fwi:{title:'FWI',layer:'fwi',unit:''}
+};
+
+function aromeCycle(){
+ const now=new Date(), h=now.getUTCHours();
+ // O AROME é produzido às 00 e 12 UTC. Mostramos o ciclo de referência,
+ // distinguindo-o de uma falsa "hora de atualização" inventada.
+ let d=new Date(now);
+ let cycle= h>=12 ? 12 : 0;
+ d.setUTCHours(cycle,0,0,0);
+ return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()} · ciclo ${String(cycle).padStart(2,'0')} UTC`;
 }
-function chooseMF2(entries,label){
- const q=norm(label);
- let candidates=entries.filter(x=>norm(x.title)===q);
- if(!candidates.length)candidates=entries.filter(x=>norm(x.title).includes(q));
- // Preferência pelo Continente/AROME quando o título/nome o indicar.
- candidates.sort((a,b)=>{
-   const sa=(/arome|continent|pib|ptc/i.test(a.name+' '+a.title)?1:0);
-   const sb=(/arome|continent|pib|ptc/i.test(b.name+' '+b.title)?1:0);
-   return sb-sa;
- });
- return candidates[0];
+function validTime(){
+ const d=new Date();
+ d.setUTCMinutes(0,0,0);
+ return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')} ${String(d.getUTCHours()).padStart(2,'0')}:00 UTC`;
 }
-async function setMeteoLayer(label,input){
+function clearMeteo(){
  if(meteoWmsLayer){map.removeLayer(meteoWmsLayer);meteoWmsLayer=null}
- if(!label){metStatus.textContent='Sem camada meteorológica ativa';metStatus.className='metStatus';return}
- metStatus.textContent='A carregar '+label+'…';metStatus.className='metStatus';
- try{
-   const entries=await loadMF2Catalog();
-   const item=chooseMF2(entries,label);
-   if(!item)throw Error('Camada não encontrada');
-   meteoWmsLayer=L.tileLayer.wms(MF2_WMS,{
-     layers:item.name,format:'image/png',transparent:true,version:'1.3.0',opacity:.68,
-     attribution:'Dados © IPMA · MF2'
-   }).addTo(map);
-   metStatus.textContent=label+' · IPMA MF2';
-   metStatus.className='metStatus ok';
-   if(innerWidth<821)panel.classList.remove('open');
- }catch(e){
-   input.checked=false;
-   document.querySelector('[data-meteo=""]').checked=true;
-   metStatus.textContent='MF2 indisponível neste momento';
-   metStatus.className='metStatus err';
- }
 }
-document.querySelectorAll('[data-meteo]').forEach(x=>x.addEventListener('change',()=>{if(x.checked)setMeteoLayer(x.dataset.meteo,x)}));
-loadMF2Catalog().catch(()=>{metStatus.textContent='MF2: ligação indisponível';metStatus.className='metStatus err'});
+function setMeteoLayer(key,input){
+ clearMeteo();
+ if(!key){
+   metStatus.textContent='Sem camada meteorológica ativa';
+   metStatus.className='metStatus'; return;
+ }
+ const product=MF2_PRODUCTS[key];
+ if(!product)return;
+ metStatus.textContent='A carregar '+product.title+'…';
+ metStatus.className='metStatus';
+
+ // PT2 = Península Ibérica / Portugal Continental no catálogo MF2.
+ // TIME é enviado à hora UTC atual; se o servidor não usar a dimensão,
+ // o WMS mantém o seu valor temporal predefinido mais recente.
+ const time=new Date(); time.setUTCMinutes(0,0,0);
+ meteoWmsLayer=L.tileLayer.wms(MF2_WMS,{
+   layers:product.layer,
+   styles:'',
+   format:'image/png',
+   transparent:true,
+   version:'1.1.1',
+   opacity:.70,
+   region:'PT2',
+   time:time.toISOString().replace('.000Z','Z'),
+   attribution:'Dados © IPMA · MF2'
+ });
+ let gotTile=false;
+ meteoWmsLayer.on('tileload',()=>{
+   if(gotTile)return; gotTile=true;
+   metStatus.textContent=`${product.title} · válido ${validTime()} · ${aromeCycle()}`;
+   metStatus.className='metStatus ok';
+ });
+ meteoWmsLayer.on('tileerror',()=>{
+   if(gotTile)return;
+   metStatus.textContent=`${product.title}: serviço IPMA MF2 sem imagem para esta hora`;
+   metStatus.className='metStatus err';
+ });
+ meteoWmsLayer.addTo(map);
+ if(innerWidth<821)panel.classList.remove('open');
+}
+document.querySelectorAll('[data-meteo]').forEach(x=>x.addEventListener('change',()=>{
+ if(x.checked)setMeteoLayer(x.dataset.meteo,x)
+}));
+metStatus.textContent='IPMA MF2 · AROME 00/12 UTC';
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js');
 </script></body></html>
