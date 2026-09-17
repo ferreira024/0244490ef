@@ -1,289 +1,65 @@
-<!doctype html>
-<html lang="pt-PT"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#f5f7f7"><link rel="manifest" href="./manifest.webmanifest">
-<title>SGO · Póvoa de Varzim</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<style>
-:root{--ink:#192326;--muted:#728087;--line:#e2e7e8;--panel:#f8fafaf0}
-*{box-sizing:border-box}html,body,#map{height:100%;margin:0;font-family:Arial,sans-serif;color:var(--ink)}
-#map{background:#edf1f1}.glass{background:#fff;border:1px solid var(--line);box-shadow:0 8px 28px #1721261c}
-.top{position:fixed;z-index:1200;top:max(10px,env(safe-area-inset-top));left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));display:flex;gap:8px;align-items:center;pointer-events:none}
-.brand,.weather,.top button{pointer-events:auto;border-radius:15px}.brand{height:50px;padding:7px 12px;display:flex;align-items:center;gap:9px}.logo{width:30px;height:30px;border-radius:9px;background:conic-gradient(#d13f49 0 25%,#d09429 0 50%,#3f8065 0 75%,#3979a5 0)}.brand b{font-size:13px;font-weight:500;white-space:nowrap}
-.weather{height:50px;display:flex;align-items:center;gap:14px;padding:0 15px;font-size:12px}.weather strong{font-size:13px}.weather span{color:var(--muted)}
-.top button{height:50px;border:0;padding:0 15px;font-size:14px}
-.panel{position:fixed;z-index:1150;top:70px;left:max(10px,env(safe-area-inset-left));width:286px;max-height:calc(100% - 84px);overflow:auto;padding:9px;background:var(--panel);backdrop-filter:blur(16px);border:1px solid #fff;border-radius:18px;box-shadow:0 15px 38px #17212620;transition:.2s}
-.group{background:#fff;border:1px solid var(--line);border-radius:13px;overflow:hidden;margin-bottom:8px}.head{padding:10px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#899499}.row{display:flex;align-items:center;gap:9px;padding:10px;border-top:1px solid #edf0f0;font-size:13px;cursor:pointer}.row small{display:block;color:#8b969b;font-size:10px;margin-top:2px}.row input{accent-color:#263238}.dot{width:9px;height:9px;border-radius:50%;flex:none}
-.metStatus{padding:8px 10px;font-size:10px;color:#7b878c;border-top:1px solid #edf0f0}
-.metStatus.ok{color:#347255}.metStatus.err{color:#a74646}
-.wxBadge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:#eef3f4;font-size:12px;flex:none}
-.info{position:fixed;z-index:1050;right:max(10px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));max-width:330px;padding:8px 10px;border-radius:12px;font-size:10px;color:#657279}.hydrantIcon{background:transparent!important;border:0!important}.leaflet-popup-content{min-width:220px;font-size:12px;line-height:1.5}.leaflet-popup-content-wrapper{border-radius:15px}
-@media(max-width:820px){.brand b{display:none}.weather{gap:7px;padding:0 9px;min-width:0;overflow:auto;white-space:nowrap;scrollbar-width:none}.weather::-webkit-scrollbar{display:none}.weather .optional{display:none}.panel{left:-310px;top:68px;width:min(286px,86vw)}.panel.open{left:max(8px,env(safe-area-inset-left))}.leaflet-control-zoom{margin-top:72px!important}.top button{padding:0 12px}}
-.ipmaWx{background:transparent!important;border:0!important}
-.wxArrow{display:flex;align-items:center;gap:3px;filter:drop-shadow(0 1px 2px #fff);white-space:nowrap}
-.wxArrow .arr{font-size:25px;line-height:25px;color:#172126;font-weight:700;transform-origin:50% 50%}
-.wxArrow .val,.wxValue{font:700 11px Arial;background:#fffffff2;border:1px solid #dce3e5;border-radius:7px;padding:2px 4px;color:#172126;box-shadow:0 1px 5px #17212622;white-space:nowrap}
-#tempCanvas,#windCanvas{position:absolute;inset:0;z-index:350;pointer-events:none}
-.hazModal{position:fixed;inset:0;z-index:4000;background:#15202577;display:none;align-items:center;justify-content:center;padding:16px}.hazModal.open{display:flex}
-.hazCard{width:min(430px,100%);background:#fff;border-radius:20px;padding:15px}.hazHead{display:flex;justify-content:space-between;gap:12px}.hazHead small{display:block;color:#738087;margin-top:3px}.hazHead button{border:0;border-radius:10px;width:34px;height:34px;font-size:22px}
-.orangePlate{width:180px;margin:17px auto 12px;background:#f28c00;border:3px solid #111;border-radius:5px;padding:7px}.orangePlate div{height:3px;background:#111;margin:5px -7px}.orangePlate input{width:100%;border:0;background:transparent;text-align:center;font:bold 29px Arial;outline:0;color:#111}.orangePlate input::placeholder{color:#1118}
-.hazActions{display:flex;gap:8px}.hazActions button{flex:1;border:0;border-radius:10px;padding:10px;font-weight:bold}.hazActions button:first-child{background:#172126;color:#fff}
-.hazResult{margin-top:12px;padding:11px;border:1px solid #dfe6e8;border-radius:12px;font-size:13px;line-height:1.45}.hazResult b{font-size:15px}.hazWarn{font-size:10px;color:#738087;margin-top:9px}
-.legendWx{position:fixed;left:300px;bottom:12px;z-index:1200;background:#fffffff0;border-radius:10px;padding:7px 9px;font-size:10px;display:none}.legendWx.show{display:block}.tempGrad{height:8px;width:180px;border-radius:4px;background:linear-gradient(90deg,#2867c7,#2daf71,#e4d13f,#ef8b2c,#d83b35)}
-@media(max-width:820px){.legendWx{left:8px;bottom:8px}}
-</style></head><body>
-<div id="map"></div><canvas id="tempCanvas"></canvas><canvas id="windCanvas"></canvas>
-<div class="top">
- <div class="brand glass"><div class="logo"></div><b>SGO · PVZ</b></div>
- <div class="weather glass"><strong id="temp">--°C</strong><span id="hum">HR --%</span><span id="wind">Vento --</span><span class="optional" id="rain">Prec. --</span><span id="rcm">RCM --</span></div>
- <button class="glass" id="hazBtn">☣ ADR</button>
-<button class="glass" id="layersBtn">☰ Camadas</button>
-</div>
-<aside class="panel" id="panel">
- <div class="group"><div class="head">Situação</div>
-  <label class="row"><input checked type="checkbox" data-layer="occ"><span class="dot" style="background:#d62828"></span><span>Ocorrências ANEPC<small>Visualização em tempo real</small></span></label>
- </div>
- <div class="group"><div class="head">Abastecimento</div>
-  <label class="row"><input type="checkbox" data-layer="hydrants"><span id="hydLegend"></span><span>Hidrantes / marcos<small>Rede municipal · clicável</small></span></label>
-  <label class="row"><input type="checkbox" data-layer="reservoirs"><span class="dot" style="background:#2585a2"></span><span>Reservatórios de água</span></label>
- </div>
- <div class="group"><div class="head">Meteorologia · IPMA</div>
-  <label class="row"><input type="radio" name="meteoLayer" data-meteo="wind"><span class="wxBadge">➤</span><span>Vento<small>Setas = direção · valor = km/h</small></span></label>
-  <label class="row"><input type="radio" name="meteoLayer" data-meteo="temperature"><span class="wxBadge">🌡</span><span>Temperatura<small>Observações IPMA · °C</small></span></label>
-  <label class="row"><input type="radio" name="meteoLayer" data-meteo="humidity"><span class="wxBadge">💧</span><span>Humidade<small>Observações IPMA · %</small></span></label>
-  <label class="row"><input type="radio" name="meteoLayer" data-meteo="precipitation"><span class="wxBadge">🌧</span><span>Precipitação<small>Observações IPMA · mm</small></span></label>
-  <label class="row"><input type="radio" name="meteoLayer" data-meteo="" checked><span class="wxBadge">×</span><span>Sem camada meteorológica</span></label>
-  <div class="metStatus" id="metLayerStatus">IPMA · a obter observações…</div>
- </div>
- <div class="group"><div class="head">Incêndio Rural · oficial</div>
-<label class="row"><input type="checkbox" id="icnfHaz"><span>🔥</span><span>Perigosidade estrutural<small>ICNF · Carta oficial 2020–2030</small></span></label>
-<div class="metStatus" id="rcmStatus">RCM IPMA · a atualizar…</div>
-</div>
-<div class="group"><div class="head">Risco imediato</div>
-  <label class="row"><input type="checkbox" data-layer="fire"><span class="dot" style="background:#c94848"></span><span>Perigosidade de incêndio</span></label>
-  <label class="row"><input type="checkbox" data-layer="flood"><span class="dot" style="background:#3979a5"></span><span>Zonas de cheia</span></label>
- </div>
- <div class="group"><div class="head">Infraestruturas críticas</div>
-  <label class="row"><input type="checkbox" data-layer="gas"><span class="dot" style="background:#d09429"></span><span>Rede de gás</span></label>
-  <label class="row"><input type="checkbox" data-layer="water"><span class="dot" style="background:#438fbd"></span><span>Rede de águas</span></label>
- </div>
-</aside>
-<div id="hazModal" class="hazModal">
-<div class="hazCard glass">
- <div class="hazHead"><div><b>☣ Identificação ADR</b><small>Painel laranja de matérias perigosas</small></div><button id="hazClose">×</button></div>
- <div class="orangePlate"><input id="kemlerInput" maxlength="4" placeholder="33"><div></div><input id="unInput" maxlength="4" inputmode="numeric" placeholder="1203"></div>
- <div class="hazActions"><button id="hazSearch">Identificar</button><button id="hazClear">Limpar</button></div>
- <div id="hazResult" class="hazResult">Introduz o número de perigo (superior) e o número ONU (inferior).</div>
- <div class="hazWarn">Apoio à identificação inicial. Confirmar a matéria na documentação ADR, ficha de segurança e orientações da autoridade competente antes de decisões operacionais.</div>
-</div></div>
-<div class="legendWx" id="wxLegend"></div>
-<div class="info glass" id="info">Póvoa de Varzim · visualização operacional</div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/esri-leaflet@3.0.15/dist/esri-leaflet.js"></script>
-<script>
-const PVZ=[41.383,-8.763],map=L.map('map',{zoomControl:true}).setView(PVZ,13);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,attribution:'© OpenStreetMap'}).addTo(map);
-const NEW='https://sig.cm-pvarzim.pt/server/rest/services/Servicos/',OLD='https://sigonline.cm-pvarzim.pt/arcgis/rest/services/';
-const ANEPC='https://services-eu1.arcgis.com/VlrHb7fn5ewYhX6y/ArcGIS/rest/services/OcorrenciasSite/FeatureServer/0';
-const esc=v=>{let d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};
-const details=p=>Object.entries(p||{}).filter(([k,v])=>v!=null&&v!==''&&!/shape|objectid/i.test(k)).slice(0,16).map(([k,v])=>'<b>'+esc(k.replaceAll('_',' '))+':</b> '+esc(v)+'<br>').join('');
-function dyn(url,ids,o=.65){let l=L.esri.dynamicMapLayer({url,layers:ids,opacity:o,useCors:false});l._identify={url,ids};return l}
-const hydrantSVG='<svg width="28" height="34" viewBox="0 0 28 34" xmlns="http://www.w3.org/2000/svg"><g fill="#d5323e" stroke="#fff" stroke-width="1.8"><path d="M9 10h10v19H9z"/><rect x="6" y="7" width="16" height="6" rx="1"/><rect x="3" y="14" width="22" height="7" rx="2"/><rect x="7" y="29" width="14" height="4" rx="1"/></g><circle cx="14" cy="5" r="3" fill="#d5323e" stroke="#fff" stroke-width="1.8"/></svg>';
-hydLegend.innerHTML=hydrantSVG.replace('width="28" height="34"','width="18" height="22"');
-const hicon=L.divIcon({className:'hydrantIcon',html:hydrantSVG,iconSize:[28,34],iconAnchor:[14,31],popupAnchor:[0,-28]});
-const hydrants=L.esri.featureLayer({url:OLD+'Inter_Intra/TEMATICOS_Infraestruturas/MapServer/87',useCors:false,pointToLayer:(g,ll)=>L.marker(ll,{icon:hicon})}).bindPopup(l=>'<b>Hidrante / marco</b><br>'+details(l.feature.properties));
-const reservoirs=L.esri.featureLayer({url:OLD+'Inter_Intra/TEMATICOS_Infraestruturas/MapServer/4',useCors:false,pointToLayer:(g,ll)=>L.circleMarker(ll,{radius:6,fillColor:'#2585a2',color:'#fff',weight:2,fillOpacity:.9})}).bindPopup(l=>'<b>Reservatório</b><br>'+details(l.feature.properties));
-const occ=L.esri.featureLayer({url:ANEPC,useCors:true,pointToLayer:(g,ll)=>L.circleMarker(ll,{radius:7,fillColor:'#d62828',color:'#fff',weight:2,fillOpacity:.95})}).bindPopup(l=>'<b>Ocorrência ANEPC</b><br>'+details(l.feature.properties));
-const layers={occ,hydrants,reservoirs,fire:dyn(NEW+'PLANOS_PDM2015/MapServer',[121],.58),flood:dyn(NEW+'PLANOS_PDM2015/MapServer',[113],.60),gas:dyn(OLD+'Inter_Intra/TEMATICOS_Infraestruturas/MapServer',[89],.72),water:dyn(OLD+'Inter_Intra/TEMATICOS_Infraestruturas/MapServer',[91],.68)};
-occ.addTo(map);
-function toggle(name,on){const l=layers[name];if(!l)return;try{if(on){if(!map.hasLayer(l))l.addTo(map);setTimeout(()=>{try{if(typeof l.refresh==='function')l.refresh();else if(typeof l.redraw==='function')l.redraw()}catch(e){}},150)}else if(map.hasLayer(l))map.removeLayer(l)}catch(e){}}
-document.querySelectorAll('[data-layer]').forEach(x=>x.addEventListener('change',()=>{toggle(x.dataset.layer,x.checked);if(innerWidth<821)panel.classList.remove('open')}));
-layersBtn.onclick=()=>panel.classList.toggle('open');
-map.on('click',e=>{info.textContent=e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5);Object.values(layers).filter(l=>l._identify&&map.hasLayer(l)).forEach(l=>L.esri.identifyFeatures({url:l._identify.url}).on(map).at(e.latlng).layers('visible:'+l._identify.ids.join(',')).run((er,fc)=>{if(!er&&fc?.features?.length)L.popup().setLatLng(e.latlng).setContent(details(fc.features[0].properties)).openOn(map)}))});
-setInterval(()=>{if(navigator.onLine&&layers.occ&&map.hasLayer(layers.occ))try{layers.occ.refresh()}catch(e){}},5000);
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Software Gestão de Operações</title>
 
-// IPMA — observações oficiais das últimas 3 horas.
-// Uma única fonte GeoJSON alimenta a barra e as camadas para evitar parsers divergentes.
-const IPMA_LIVE='https://api.ipma.pt/open-data/observation/meteorology/stations/obs-surface.geojson';
-let ipmaFeatures=[], meteoObsLayer=null, ipmaLoadedAt=null;
-const metStatus=document.getElementById('metLayerStatus');
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-function good(v){v=Number(v);return Number.isFinite(v)&&v>-90}
-function dist2(a,b){return (a[0]-b[0])**2+(a[1]-b[1])**2}
-function arrowAngle(desc){
- const d={N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315};
- // Arrow glyph points right by default; rotate so its tip points toward the compass bearing.
- return (d[desc]??0)-90;
-}
-function nearestValid(prop){
- let best=null,bd=Infinity;
- for(const f of ipmaFeatures){
-   const c=f.geometry?.coordinates,p=f.properties||{};
-   if(!c||!good(p[prop]))continue;
-   const dd=dist2([c[1],c[0]],PVZ);
-   if(dd<bd){bd=dd;best=f}
- }
- return best;
-}
-function fmtTime(t){
- if(!t)return 'hora desconhecida';
- const d=new Date(t.endsWith('Z')?t:t+'Z');
- if(Number.isNaN(d.getTime()))return t.replace('T',' ');
- return d.toLocaleString('pt-PT',{timeZone:'UTC',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+' UTC';
-}
-async function loadIPMA(){
- try{
-   const r=await fetch(IPMA_LIVE+'?v='+Date.now(),{cache:'no-store'});
-   if(!r.ok)throw Error('HTTP '+r.status);
-   const j=await r.json();
-   ipmaFeatures=(j.features||[]).filter(f=>f?.geometry?.type==='Point');
-   if(!ipmaFeatures.length)throw Error('sem estações');
-   ipmaLoadedAt=new Date();
-   updateBar();
-   const active=document.querySelector('[data-meteo]:checked')?.dataset.meteo;
-   if(active) drawMeteo(active);
- }catch(e){
-   metStatus.textContent='IPMA indisponível · a tentar novamente';
-   metStatus.className='metStatus err';
-   info.textContent='Não foi possível obter observações IPMA';
- }
-}
-function updateBar(){
- const f=nearestValid('temperatura')||ipmaFeatures[0],p=f?.properties||{};
- const wf=nearestValid('intensidadeVentoKM'),wp=wf?.properties||{};
- temp.textContent=good(p.temperatura)?Number(p.temperatura).toFixed(1)+'°C':'--°C';
- hum.textContent=good(p.humidade)?'HR '+Math.round(p.humidade)+'%':'HR --%';
- wind.textContent=good(wp.intensidadeVentoKM)?`Vento ${wp.descDirVento||''} ${Number(wp.intensidadeVentoKM).toFixed(1)} km/h`:'Vento --';
- rain.textContent=good(p.precAcumulada)?'Prec. '+Number(p.precAcumulada).toFixed(1)+' mm':'Prec. --';
- const times=ipmaFeatures.map(x=>x.properties?.time).filter(Boolean).sort().reverse();
- const latest=times[0]||p.time;
- info.textContent=`IPMA · ${p.localEstacao||'estação próxima'} · atualização ${fmtTime(latest)}`;
- metStatus.textContent=`Observações IPMA · atualização ${fmtTime(latest)}`;
- metStatus.className='metStatus ok';
-}
-function clearMeteo(){
- if(meteoObsLayer){map.removeLayer(meteoObsLayer);meteoObsLayer=null}
-}
-function drawMeteo(kind){
- clearMeteo();
- if(!kind){metStatus.textContent='Sem camada meteorológica ativa';return}
- if(!ipmaFeatures.length){metStatus.textContent='A carregar dados IPMA…';return}
- meteoObsLayer=L.layerGroup();
- const bounds=map.getBounds().pad(.65);
- for(const f of ipmaFeatures){
-   const c=f.geometry?.coordinates,p=f.properties||{},ll=L.latLng(c?.[1],c?.[0]);
-   if(!c||!bounds.contains(ll))continue;
-   let html='', value=null;
-   if(kind==='wind'&&good(p.intensidadeVentoKM)){
-     const ang=arrowAngle(p.descDirVento);
-     html=`<div class="wxArrow"><span class="arr" style="transform:rotate(${ang}deg)">➜</span><span class="val">${Math.round(p.intensidadeVentoKM)}</span></div>`;
-   }else if(kind==='temperature'&&good(p.temperatura)){value=Number(p.temperatura).toFixed(1)+'°'}
-   else if(kind==='humidity'&&good(p.humidade)){value=Math.round(p.humidade)+'%'}
-   else if(kind==='precipitation'&&good(p.precAcumulada)){value=Number(p.precAcumulada).toFixed(1)+' mm'}
-   if(value!==null)html=`<span class="wxValue">${value}</span>`;
-   if(!html)continue;
-   const icon=L.divIcon({className:'ipmaWx',html,iconSize:kind==='wind'?[72,28]:[48,22],iconAnchor:[24,11]});
-   L.marker(ll,{icon,interactive:true}).bindPopup(
-    `<b>${p.localEstacao||'Estação IPMA'}</b><br>`+
-    `Temperatura: ${good(p.temperatura)?p.temperatura+' °C':'—'}<br>`+
-    `Humidade: ${good(p.humidade)?p.humidade+' %':'—'}<br>`+
-    `Vento: ${good(p.intensidadeVentoKM)?p.intensidadeVentoKM+' km/h '+(p.descDirVento||''):'—'}<br>`+
-    `Precipitação: ${good(p.precAcumulada)?p.precAcumulada+' mm':'—'}<br>`+
-    `<small>${fmtTime(p.time)}</small>`
-   ).addTo(meteoObsLayer);
- }
- meteoObsLayer.addTo(map);
- const latest=ipmaFeatures.map(x=>x.properties?.time).filter(Boolean).sort().reverse()[0];
- const names={wind:'Vento · setas de direção',temperature:'Temperatura',humidity:'Humidade',precipitation:'Precipitação'};
- metStatus.textContent=`${names[kind]} · IPMA · ${fmtTime(latest)}`;
- metStatus.className='metStatus ok';
-}
-document.querySelectorAll('[data-meteo]').forEach(x=>x.addEventListener('change',()=>{
- if(x.checked){drawMeteo(x.dataset.meteo);if(innerWidth<821)panel.classList.remove('open')}
-}));
-map.on('moveend',()=>{
- const active=document.querySelector('[data-meteo]:checked')?.dataset.meteo;
- if(active)drawMeteo(active);
-});
-loadIPMA();
-setInterval(loadIPMA,10*60*1000);
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #111111;
+    }
 
-// --- V13: perigo de incêndio oficial, RCM e meteorologia visual ---
-const ICNF_WMS='https://si.icnf.pt/wms/perigosidade_estrutural_2020_2030';
-let icnfLayer=null;
-document.getElementById('icnfHaz').addEventListener('change',e=>{
- if(e.target.checked){
-  if(!icnfLayer) icnfLayer=L.tileLayer.wms(ICNF_WMS,{layers:'perigosidade_estrutural_2020_2030',format:'image/png',transparent:true,version:'1.3.0',opacity:.62,attribution:'ICNF · Carta de Perigosidade de Incêndio Rural'});
-  icnfLayer.addTo(map);
- } else if(icnfLayer) map.removeLayer(icnfLayer);
-});
-async function loadRCM(){
- const el=document.getElementById('rcmStatus');
- try{
-  const r=await fetch('https://api.ipma.pt/open-data/forecast/meteorology/rcm/rcm-d0.json?x='+Date.now(),{cache:'no-store'});
-  if(!r.ok) throw Error();
-  const j=await r.json(), a=Array.isArray(j)?j:(j.data||[]);
-  const row=a.find(x=>String(x.local||x.concelho||x.name||'').toLowerCase().includes('póvoa de varzim') || String(x.local||x.concelho||x.name||'').toLowerCase().includes('povoa de varzim'));
-  const val=row && (row.rcm ?? row.risk ?? row.data?.rcm);
-  el.textContent=row?`RCM Póvoa de Varzim · ${val ?? 'consultar IPMA'}`:'RCM Póvoa de Varzim · dados IPMA carregados';
- }catch(e){el.textContent='RCM IPMA · temporariamente indisponível'}
-}
-loadRCM(); setInterval(loadRCM,30*60*1000);
+    .container {
+      width: 100%;
+      padding: 32px 20px;
+      text-align: center;
+    }
 
-// Camadas visuais a partir das observações IPMA já carregadas pela aplicação.
-// São uma estimativa espacial entre estações, não o modelo AROME/IPMA.
-const tc=document.getElementById('tempCanvas'),wc2=document.getElementById('windCanvas'),tctx=tc.getContext('2d'),wctx2=wc2.getContext('2d'),leg=document.getElementById('wxLegend');
-let windRAF=0,parts=[];
-function resizeCanv(){const r=map.getContainer().getBoundingClientRect(),d=devicePixelRatio||1;for(const c of [tc,wc2]){c.width=r.width*d;c.height=r.height*d;c.style.width=r.width+'px';c.style.height=r.height+'px';c.getContext('2d').setTransform(d,0,0,d,0,0)}}
-function valStations(prop){return (window.ipmaFeatures||ipmaFeatures||[]).filter(f=>f.geometry?.coordinates&&good(f.properties?.[prop]))}
-function idw(lat,lng,prop){const a=valStations(prop);let sw=0,sv=0;for(const f of a){const c=f.geometry.coordinates,dx=(lng-c[0])*Math.cos(lat*Math.PI/180),dy=lat-c[1],q=dx*dx+dy*dy;if(q<.000002)return +f.properties[prop];const w=1/Math.pow(q,1.05);sw+=w;sv+=w*(+f.properties[prop])}return sw?sv/sw:null}
-function tcol(v){if(v<8)return [45,105,196];if(v<15)return [48,170,113];if(v<22)return [221,202,55];if(v<30)return [239,139,44];return [214,57,52]}
-function drawTemp(){
- resizeCanv();const r=map.getContainer().getBoundingClientRect();tctx.clearRect(0,0,r.width,r.height);const step=22;
- for(let y=0;y<r.height;y+=step)for(let x=0;x<r.width;x+=step){const ll=map.containerPointToLatLng([x+step/2,y+step/2]),v=idw(ll.lat,ll.lng,'temperatura');if(v==null)continue;const c=tcol(v);tctx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},.38)`;tctx.fillRect(x,y,step+1,step+1)}
- leg.innerHTML='<b>Temperatura estimada entre estações IPMA</b><div class="tempGrad"></div><div>frio &nbsp; → &nbsp; quente</div>';leg.classList.add('show')
-}
-function windVec(lat,lng){const a=valStations('intensidadeVentoKM');let su=0,sv=0,sw=0;for(const f of a){const p=f.properties,c=f.geometry.coordinates,dir={N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315}[p.descDirVento];if(dir==null)continue;const dx=(lng-c[0])*Math.cos(lat*Math.PI/180),dy=lat-c[1],q=dx*dx+dy*dy+.00001,w=1/Math.pow(q,1.0),sp=+p.intensidadeVentoKM,rad=dir*Math.PI/180;su+=w*(-Math.sin(rad)*sp);sv+=w*(Math.cos(rad)*sp);sw+=w}return sw?[su/sw,sv/sw]:[0,0]}
-function seed(){const r=map.getContainer().getBoundingClientRect();parts=Array.from({length:Math.min(550,Math.round(r.width*r.height/1800))},()=>({x:Math.random()*r.width,y:Math.random()*r.height,a:Math.random()*80}))}
-function animateWind(){
- const r=map.getContainer().getBoundingClientRect();wctx2.fillStyle='rgba(255,255,255,.08)';wctx2.fillRect(0,0,r.width,r.height);wctx2.strokeStyle='rgba(20,55,65,.65)';wctx2.lineWidth=1;
- for(const p of parts){const ll=map.containerPointToLatLng([p.x,p.y]),v=windVec(ll.lat,ll.lng),mag=Math.hypot(v[0],v[1]),k=.018;const nx=p.x+v[0]*k,ny=p.y-v[1]*k;wctx2.beginPath();wctx2.moveTo(p.x,p.y);wctx2.lineTo(nx,ny);wctx2.stroke();p.x=nx;p.y=ny;p.a++;if(p.x<0||p.x>r.width||p.y<0||p.y>r.height||p.a>120){p.x=Math.random()*r.width;p.y=Math.random()*r.height;p.a=0}}
- windRAF=requestAnimationFrame(animateWind)
-}
-function visualMeteo(kind){
- cancelAnimationFrame(windRAF);resizeCanv();const r=map.getContainer().getBoundingClientRect();tctx.clearRect(0,0,r.width,r.height);wctx2.clearRect(0,0,r.width,r.height);leg.classList.remove('show');
- if(kind==='temperature')drawTemp();
- if(kind==='wind'){seed();animateWind();leg.innerHTML='<b>Vento · animação estimada</b><div>Interpolação das observações IPMA</div>';leg.classList.add('show')}
-}
-document.querySelectorAll('[data-meteo]').forEach(el=>el.addEventListener('change',()=>{if(el.checked)visualMeteo(el.dataset.meteo)}));
-map.on('moveend zoomend',()=>{const k=document.querySelector('[data-meteo]:checked')?.dataset.meteo;if(k==='temperature'||k==='wind')visualMeteo(k)});
+    h1 {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: clamp(30px, 5vw, 54px);
+      font-weight: 600;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+    }
 
-// ADR: identificação inicial; pequena base local de matérias frequentes + interpretação Kemler.
-const UNDB={
- '1202':'Gasóleo / combustível diesel / óleo de aquecimento leve',
- '1203':'Gasolina',
- '1223':'Querosene',
- '1072':'Oxigénio comprimido',
- '1073':'Oxigénio líquido refrigerado',
- '1005':'Amoníaco anidro',
- '1017':'Cloro',
- '1049':'Hidrogénio comprimido',
- '1978':'Propano',
- '1965':'Mistura de hidrocarbonetos gasosos liquefeitos, n.s.a. (GPL)',
- '1090':'Acetona',
- '1170':'Etanol / solução de etanol',
- '1789':'Ácido clorídrico',
- '1830':'Ácido sulfúrico com mais de 51% de ácido'
-};
-function kemlerMeaning(k){
- k=(k||'').toUpperCase().trim();let water=k.startsWith('X');if(water)k=k.slice(1);
- const m={'2':'Emanação de gás por pressão ou reação química','3':'Inflamabilidade de líquidos/gases ou líquido suscetível de autoaquecimento','4':'Inflamabilidade de sólidos ou sólido suscetível de autoaquecimento','5':'Comburente (favorece incêndio)','6':'Toxicidade ou risco de infeção','7':'Radioatividade','8':'Corrosividade','9':'Risco de reação violenta espontânea'};
- const chars=[...new Set(k.split('').filter(x=>x!=='0'))], out=chars.map(x=>m[x]).filter(Boolean);
- return {text:out.length?out.join('; '):'Código não interpretado localmente',water};
-}
-const hm=document.getElementById('hazModal');
-document.getElementById('hazBtn').onclick=()=>hm.classList.add('open');document.getElementById('hazClose').onclick=()=>hm.classList.remove('open');
-document.getElementById('hazClear').onclick=()=>{kemlerInput.value='';unInput.value='';hazResult.textContent='Introduz o número de perigo (superior) e o número ONU (inferior).'};
-document.getElementById('hazSearch').onclick=()=>{const k=kemlerInput.value.trim().toUpperCase(),u=unInput.value.trim(),km=kemlerMeaning(k),name=UNDB[u];hazResult.innerHTML=`<b>ONU ${u||'—'} · ${name||'não consta da base local'}</b><br>N.º de perigo ${k||'—'}: ${km.text}${km.water?'<br><strong>⚠ X: reage perigosamente com água.</strong>':''}<br><small>${name?'Identificação local disponível.':'Confirmar o número ONU em fonte ADR oficial antes de atuar.'}</small>`};
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js');
-</script></body></html>
+    .location {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: clamp(17px, 2.2vw, 24px);
+      font-weight: 300;
+      margin-bottom: 28px;
+    }
+
+    .notice {
+      display: inline-block;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      letter-spacing: 0.4px;
+      text-decoration: underline;
+      text-underline-offset: 5px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <h1>Software Gestão de Operações</h1>
+    <div class="location">Póvoa de Varzim</div>
+    <div class="notice">Software Interno NÃO OFICIAL</div>
+  </main>
+</body>
+</html>
